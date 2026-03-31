@@ -1,0 +1,122 @@
+version: "3.9"
+
+
+services:
+
+  configsvr1:
+    image: mongo:7.0
+    container_name: configsvr1
+    command: mongod --configsvr --replSet cfgrs --port 27019 --bind_ip_all
+    volumes:
+      - configsvr1_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  configsvr2:
+    image: mongo:7.0
+    container_name: configsvr2
+    command: mongod --configsvr --replSet cfgrs --port 27019 --bind_ip_all
+    volumes:
+      - configsvr2_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  configsvr3:
+    image: mongo:7.0
+    container_name: configsvr3
+    command: mongod --configsvr --replSet cfgrs --port 27019 --bind_ip_all
+    volumes:
+      - configsvr3_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  # ---- Shard 1 Replica Set ----
+  shard1svr1:
+    image: mongo:7.0
+    container_name: shard1svr1
+    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all
+    volumes:
+      - shard1svr1_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  shard1svr2:
+    image: mongo:7.0
+    container_name: shard1svr2
+    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all
+    volumes:
+      - shard1svr2_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  shard1svr3:
+    image: mongo:7.0
+    container_name: shard1svr3
+    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all
+    volumes:
+      - shard1svr3_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  # ---- Shard 2 Replica Set ----
+  shard2svr1:
+    image: mongo:7.0
+    container_name: shard2svr1
+    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all
+    volumes:
+      - shard2svr1_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  shard2svr2:
+    image: mongo:7.0
+    container_name: shard2svr2
+    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all
+    volumes:
+      - shard2svr2_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  shard2svr3:
+    image: mongo:7.0
+    container_name: shard2svr3
+    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all
+    volumes:
+      - shard2svr3_data:/data/db
+    networks:
+      - mongo-shard-net
+
+  # ---- Mongos Router ----
+  mongos:
+    image: mongo:7.0
+    container_name: mongos
+    command: mongos --configdb cfgrs/configsvr1:27019,configsvr2:27019,configsvr3:27019 --port 27017 --bind_ip_all
+    ports:
+      - "27017:27017"
+    depends_on:
+      - configsvr1
+      - configsvr2
+      - configsvr3
+      - shard1svr1
+      - shard1svr2
+      - shard1svr3
+      - shard2svr1
+      - shard2svr2
+      - shard2svr3
+    networks:
+      - mongo-shard-net
+
+volumes:
+  configsvr1_data:
+  configsvr2_data:
+  configsvr3_data:
+  shard1svr1_data:
+  shard1svr2_data:
+  shard1svr3_data:
+  shard2svr1_data:
+  shard2svr2_data:
+  shard2svr3_data:
+
+networks:
+  mongo-shard-net:
+    driver: bridge
