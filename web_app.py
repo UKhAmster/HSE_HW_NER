@@ -9,11 +9,28 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
+from bson import ObjectId, Timestamp
 from flask import Flask, jsonify, render_template_string, request
+from flask.json.provider import DefaultJSONProvider
 
 from db import DEGREE_PROGRAMS, FACULTIES, get_db
 
+
+class MongoJSONProvider(DefaultJSONProvider):
+    """Handle MongoDB-specific types (ObjectId, Timestamp, datetime)."""
+    def default(self, o):
+        if isinstance(o, ObjectId):
+            return str(o)
+        if isinstance(o, Timestamp):
+            return {"t": o.time, "i": o.inc}
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return super().default(o)
+
+
 app = Flask(__name__)
+app.json_provider_class = MongoJSONProvider
+app.json = MongoJSONProvider(app)
 db = get_db()
 
 
@@ -72,7 +89,7 @@ HTML_TEMPLATE = """
 </style>
 </head>
 <body>
-<div class="navbar">🎓 University DB <span>MongoDB Sharded Cluster</span></div>
+<div class="navbar"> University DB <span>MongoDB Sharded Cluster</span></div>
 <div class="container">
   <div class="tabs">
     <div class="tab active" onclick="showTab('students')">Студенты</div>
@@ -312,7 +329,8 @@ def api_analytics():
 @app.route("/api/sharding")
 def api_sharding():
     admin = db.client.admin
-    shards_info = admin.command("listShards").get("shards", [])
+    raw_shards = admin.command("listShards").get("shards", [])
+    shards_info = [{"_id": s["_id"], "host": s["host"]} for s in raw_shards]
     collections_info = []
     for col_name in ["students", "courses", "enrollments", "grades"]:
         try:
